@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Titanic Survival Predictor</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background-color: #eaf6ff;
+      padding: 20px;
+    }
+    h1 {
+      text-align: center;
+      color: #0077b6;
+    }
+    form {
+      max-width: 500px;
+      margin: auto;
+      background-color: #ffffff;
+      padding: 20px;
+      border-radius: 10px;
+      box-shadow: 0px 0px 10px #ccc;
+    }
+    label, select, input {
+      display: block;
+      width: 100%;
+      margin-bottom: 15px;
+    }
+    button {
+      background-color: #0077b6;
+      color: white;
+      padding: 10px;
+      border: none;
+      border-radius: 5px;
+      width: 100%;
+    }
+    #result {
+      text-align: center;
+      font-weight: bold;
+      font-size: 1.2em;
+      margin-top: 20px;
+    }
+  </style>
+</head>
+<body>
+
+  <h1>Titanic Survival Predictor 🚢</h1>
+
+  <form id="predictionForm">
+    <label for="Pclass">Passenger Class:</label>
+    <select id="Pclass" name="Pclass" required>
+      <option value="1">1st</option>
+      <option value="2">2nd</option>
+      <option value="3">3rd</option>
+    </select>
+
+    <label for="Sex">Sex:</label>
+    <select id="Sex" name="Sex" required>
+      <option value="Male">Male</option>
+      <option value="Female">Female</option>
+    </select>
+
+    <label for="Age">Age:</label>
+    <input type="number" id="Age" name="Age" min="0" max="100" required>
+
+    <label for="SibSp">Siblings/Spouses Aboard:</label>
+    <input type="number" id="SibSp" name="SibSp" min="0" max="10" required>
+
+    <label for="Parch">Parents/Children Aboard:</label>
+    <input type="number" id="Parch" name="Parch" min="0" max="10" required>
+
+    <label for="Fare">Fare:</label>
+    <input type="number" step="0.01" id="Fare" name="Fare" required>
+
+    <label for="Embarked">Port of Embarkation:</label>
+    <select id="Embarked" name="Embarked" required>
+      <option value="C">Cherbourg</option>
+      <option value="Q">Queenstown</option>
+      <option value="S">Southampton</option>
+      <option value="UNKNOWN">Unknown</option>
+    </select>
+
+    <button type="submit">Predict</button>
+  </form>
+
+  <div id="result"></div>
+
+  <script>
+    document.getElementById("predictionForm").addEventListener("submit", async function(e) {
+      e.preventDefault();
+
+      const data = {
+        Pclass: parseInt(document.getElementById("Pclass").value),
+        Sex: document.getElementById("Sex").value,
+        Age: parseFloat(document.getElementById("Age").value),
+        SibSp: parseInt(document.getElementById("SibSp").value),
+        Parch: parseInt(document.getElementById("Parch").value),
+        Fare: parseFloat(document.getElementById("Fare").value),
+        Embarked: document.getElementById("Embarked").value
+      };
+
+      try {
+        const response = await fetch("/predict", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json"
+          },
+          body: JSON.stringify(data)
+        });
+
+        const result = await response.json();
+
+        if (response.ok) {
+          document.getElementById("result").innerHTML = `Prediction: <strong>${result.prediction}</strong>`;
+        } else {
+          document.getElementById("result").innerHTML = `Error: ${result.error}`;
+        }
+
+      } catch (error) {
+        document.getElementById("result").innerHTML = `Error: ${error}`;
+      }
+    });
+  </script>
+
+</body>
+</html>

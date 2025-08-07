@@ -1,7 +1,9 @@
 
-import streamlit as st
+from flask import Flask, request, jsonify,render_template
 import pickle
 import pandas as pd
+
+app = Flask(__name__, template_folder='templates')
 
 # Load the trained model and columns
 with open("logistic_model.pkl", "rb") as f:
@@ -10,71 +12,50 @@ with open("logistic_model.pkl", "rb") as f:
 with open("columns.pkl", "rb") as f:
     model_columns = pickle.load(f)
 
-# Define the prediction function
-def predict_survival(Pclass, Sex, Age, SibSp, Parch, Fare, Embarked):
-    # Create a dataframe with user inputs
-    input_data = pd.DataFrame([{
-        'Pclass': Pclass,
-        'Sex': Sex,
-        'Age': Age,
-        'SibSp': SibSp,
-        'Parch': Parch,
-        'Fare': Fare,
-        'Embarked': Embarked
-    }])
-    # Apply same preprocessing as training
-    input_data['Embarked'] = input_data['Embarked'].fillna('UNKNOWN')
+# Prediction function
+def predict_survival(data):
+    # Create DataFrame from incoming JSON
+    input_data = pd.DataFrame([data])
 
-    # One-hot encode user inputs (same as training)
+    # Fill missing categorical values
+    input_data['Embarked'] = input_data['Embarked'].fillna('UNKNOWN')
+    input_data['Sex'] = input_data['Sex'].fillna('UNKNOWN')
+
+    # One-hot encode
     input_data_encoded = pd.get_dummies(input_data, drop_first=True)
 
-    # Add any missing columns that the model expects
+    # Add missing columns
     for col in model_columns:
         if col not in input_data_encoded.columns:
             input_data_encoded[col] = 0
 
-    # Reorder columns to match training
+    # Reorder columns
     input_data_encoded = input_data_encoded[model_columns]
 
-    # Predict using the model
+    # Predict
     prediction = model.predict(input_data_encoded)[0]
-    return "Survived" if prediction == 1 else "Did Not Survive"
+    result = "Survived " if prediction == 1 else "Did Not Survive 💀"
+    return result
 
-# Streamlit app UI
-def main():
-    st.set_page_config(page_title="Titanic Survival Predictor", layout="centered")
+@app.route("/", methods=["GET"])
+def index():
+    return render_template("index.html")
 
-    st.markdown("""
-        <div style="background-color: #add8e6; padding: 10px; border-radius: 10px;">
-        <h2 style="text-align: center; color: black;">Titanic Survival Prediction (Logistic Regression)</h2>
-        </div>
-    """, unsafe_allow_html=True)
+# Health check endpoint
+@app.route("/", methods=["GET"])
+def home():
+    return jsonify({"message": "Titanic Survival API is running!"})
 
-    Pclass = st.selectbox("Passenger Class", [1, 2, 3])
-    Sex = st.selectbox("Sex", ['Male', 'Female'])
-    Age = st.slider("Age", 0, 100, 30)
-    SibSp = st.number_input("Siblings/Spouses Aboard", 0, 10)
-    Parch = st.number_input("Parents/Children Aboard", 0, 10)
-    Fare = st.number_input("Ticket Fare", 0.0, 600.0, 32.2)
-    Embarked = st.selectbox("Port of Embarkation", ['C', 'Q', 'S', 'UNKNOWN'])
+# Prediction endpoint
+@app.route("/predict", methods=["POST"])
+def predict():
+    try:
+        data = request.get_json()
+        prediction = predict_survival(data)
+        return jsonify({"prediction": prediction})
+    except Exception as e:
+        return jsonify({"error": str(e)}), 400
 
-
-    if st.button("Predict"):
-        result = predict_survival(Pclass, Sex, Age, SibSp, Parch, Fare, Embarked)
-        if result == "Survived":
-            st.markdown(f"""
-            <div style='background-color:#d4edda;padding:15px;border-radius:10px'>
-            <h3 style='color:green;text-align:center;'>Prediction: {result}</h3>
-           </div>
-           """, unsafe_allow_html=True)
-        
-        else:
-            st.markdown(f"""
-            <div style='background-color:#f8d7da;padding:15px;border-radius:10px'>
-            <h3 style='color:red;text-align:center;'>Prediction: {result}</h3>
-            </div>
-            """, unsafe_allow_html=True)
-        
-# Run the app
+# Run app
 if __name__ == '__main__':
-    main()
+    app.run(debug=True)
